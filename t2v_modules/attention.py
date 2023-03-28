@@ -301,59 +301,6 @@ class BasicTransformerBlock(nn.Module):
         x = self.ff(self.norm3(x)) + x
         return x
 
-class AttentionBlock(nn.Module):
-
-    def __init__(self, dim, context_dim=None, num_heads=None, head_dim=None):
-        # consider head_dim first, then num_heads
-        num_heads = dim // head_dim if head_dim else num_heads
-        head_dim = dim // num_heads
-        assert num_heads * head_dim == dim
-        super(AttentionBlock, self).__init__()
-        self.dim = dim
-        self.context_dim = context_dim
-        self.num_heads = num_heads
-        self.head_dim = head_dim
-        self.scale = math.pow(head_dim, -0.25)
-
-        # layers
-        self.norm = nn.GroupNorm(32, dim)
-        self.to_qkv = nn.Conv2d(dim, dim * 3, 1)
-        if context_dim is not None:
-            self.context_kv = nn.Linear(context_dim, dim * 2)
-        self.proj = nn.Conv2d(dim, dim, 1)
-
-        # zero out the last layer params
-        nn.init.zeros_(self.proj.weight)
-
-    def forward(self, x, context=None):
-        r"""x:       [B, C, H, W].
-            context: [B, L, C] or None.
-        """
-        identity = x
-        b, c, h, w, n, d = *x.size(), self.num_heads, self.head_dim
-
-        # compute query, key, value
-        x = self.norm(x)
-        q, k, v = self.to_qkv(x).view(b, n * 3, d, h * w).chunk(3, dim=1)
-        if context is not None:
-            ck, cv = self.context_kv(context).reshape(b, -1, n * 2,
-                                                      d).permute(0, 2, 3,
-                                                                 1).chunk(
-                                                                     2, dim=1)
-            k = torch.cat([ck, k], dim=-1)
-            v = torch.cat([cv, v], dim=-1)
-
-        # compute attention
-        attn = torch.matmul(q.transpose(-1, -2) * self.scale, k * self.scale)
-        attn = F.softmax(attn, dim=-1)
-
-        # gather context
-        x = torch.matmul(v, attn.transpose(-1, -2))
-        x = x.reshape(b, c, h, w)
-        # output
-        x = self.proj(x)
-        return x + identity
-
 class FeedForward(nn.Module):
 
     def __init__(self, dim, dim_out=None, mult=4, glu=False, dropout=0.):
