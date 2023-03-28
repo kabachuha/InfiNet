@@ -24,6 +24,8 @@ from os import path as osp
 from ldm.modules.diffusionmodules.model import Decoder, Encoder
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 
+LOW_VRAM_OPTS_ON = False
+
 from .utils import _i, torch_gc
 
 def beta_schedule(schedule,
@@ -206,37 +208,38 @@ class GaussianDiffusion(object):
         mask = t.ne(0).float().view(-1, *((1, ) * (xt.ndim - 1)))
         xt_1 = torch.sqrt(alphas_prev) * x0 + direction + mask * sigmas * noise
 
-        noise.cpu()
-        direction.cpu()
-        mask.cpu()
-        alphas.cpu()
-        alphas_prev.cpu()
-        sigmas.cpu()
-        a.cpu()
-        b.cpu()
-        eps.cpu()
-        x0.cpu()
-        noise = None
-        direction = None
-        mask = None
-        alphas = None
-        alphas_prev = None
-        sigmas = None
-        a = None
-        b = None
-        eps = None
-        x0 = None
-        del noise
-        del direction
-        del mask
-        del alphas
-        del alphas_prev
-        del sigmas
-        del a
-        del b
-        del eps
-        del x0
-        torch_gc()
+        if LOW_VRAM_OPTS_ON:
+            noise.cpu()
+            direction.cpu()
+            mask.cpu()
+            alphas.cpu()
+            alphas_prev.cpu()
+            sigmas.cpu()
+            a.cpu()
+            b.cpu()
+            eps.cpu()
+            x0.cpu()
+            noise = None
+            direction = None
+            mask = None
+            alphas = None
+            alphas_prev = None
+            sigmas = None
+            a = None
+            b = None
+            eps = None
+            x0 = None
+            del noise
+            del direction
+            del mask
+            del alphas
+            del alphas_prev
+            del sigmas
+            del a
+            del b
+            del eps
+            del x0
+            torch_gc()
         return xt_1
 
     @torch.no_grad()
@@ -263,10 +266,11 @@ class GaussianDiffusion(object):
             xt = self.ddim_sample(xt, t, model, model_kwargs, clamp,
                                      percentile, condition_fn, guide_scale,
                                      ddim_timesteps, eta)
-            t.cpu()
-            t = None
-            torch_gc()
-            print(step)
+            if LOW_VRAM_OPTS_ON:
+                t.cpu()
+                t = None
+                torch_gc()
+                print(step)
         return xt
 
     def _scale_timesteps(self, t):
