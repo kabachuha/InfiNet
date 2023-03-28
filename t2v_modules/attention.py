@@ -26,7 +26,24 @@ from .utils import default, exists, zero_module, GEGLU
 from ldm.modules.diffusionmodules.model import Decoder, Encoder
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 
-## TODO: add cross-attention optimization from Torch 2
+ATTENTION_TYPES = ['vanilla', 'xformers', 'torch2_scaled_dot']
+SELECTED_ATTENTION_TYPE = 'vanilla'
+
+def has_xformers():
+    try:
+        import xformers
+        return True
+    except ImportError:
+        return False
+
+def has_torch2():
+    try:
+        import torch
+        if torch.__version__.startswith('2'):
+            return True
+    except ImportError:
+        ...
+    return False
 
 class CrossAttention(nn.Module):
 
@@ -60,19 +77,34 @@ class CrossAttention(nn.Module):
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h),
                       (q, k, v))
-        sim = torch.einsum('b i d, b j d -> b i j', q, k) * self.scale
-        del q, k
+        
+        if SELECTED_ATTENTION_TYPE == 'vanilla':
+            sim = torch.einsum('b i d, b j d -> b i j', q, k) * self.scale
+            del q, k
 
-        if exists(mask):
-            mask = rearrange(mask, 'b ... -> b (...)')
-            max_neg_value = -torch.finfo(sim.dtype).max
-            mask = repeat(mask, 'b j -> (b h) () j', h=h)
-            sim.masked_fill_(~mask, max_neg_value)
+            if exists(mask):
+                mask = rearrange(mask, 'b ... -> b (...)')
+                max_neg_value = -torch.finfo(sim.dtype).max
+                mask = repeat(mask, 'b j -> (b h) () j', h=h)
+                sim.masked_fill_(~mask, max_neg_value)
 
-        # attention, what we cannot get enough of
-        sim = sim.softmax(dim=-1)
+            # attention, what we cannot get enough of
+            sim = sim.softmax(dim=-1)
 
-        out = torch.einsum('b i j, b j d -> b i d', sim, v)
+            out = torch.einsum('b i j, b j d -> b i d', sim, v)
+        elif SELECTED_ATTENTION_TYPE == 'xformers' and has_xformers():
+            import xformers
+            out = xformers.ops.memory_efficient_attention(
+                q, k, v, op=self.attention_op, scale=self.scale
+            )
+        elif SELECTED_ATTENTION_TYPE == 'torch2_scaled_dot' and has_torch2():
+            out = F.scaled_dot_product_attention(
+                q, k, v, dropout_p=0.0, is_causal=False
+            )
+        else:
+            print(f'Attention type {SELECTED_ATTENTION_TYPE} not available')
+            raise NotImplementedError
+        
         out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
         return self.to_out(out)
 
