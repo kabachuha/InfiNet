@@ -24,6 +24,10 @@ from os import path as osp
 from ldm.modules.diffusionmodules.model import Decoder, Encoder
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 
+from .attention import *
+from .conv_blocks import *
+from .utils import sinusoidal_embedding, prob_mask_like
+
 ## NOTE: it's just the copypasted U-net at the moment
 ## The DOD-layers are yet to be added
 
@@ -50,7 +54,7 @@ class DoDUNetSD(nn.Module):
                  use_sim_mask=False):
         embed_dim = dim * 4
         num_heads = num_heads if num_heads else dim // 32
-        super(UNetSD, self).__init__()
+        super(DoDUNetSD, self).__init__()
         self.in_dim = in_dim
         self.dim = dim
         self.y_dim = y_dim
@@ -370,18 +374,3 @@ class DoDUNetSD(nn.Module):
         else:
             x = module(x)
         return x
-
-class FeedForward(nn.Module):
-
-    def __init__(self, dim, dim_out=None, mult=4, glu=False, dropout=0.):
-        super().__init__()
-        inner_dim = int(dim * mult)
-        dim_out = default(dim_out, dim)
-        project_in = nn.Sequential(nn.Linear(
-            dim, inner_dim), nn.GELU()) if not glu else GEGLU(dim, inner_dim)
-
-        self.net = nn.Sequential(project_in, nn.Dropout(dropout),
-                                 nn.Linear(inner_dim, dim_out))
-
-    def forward(self, x):
-        return self.net(x)

@@ -21,6 +21,8 @@ from einops import rearrange, repeat
 import open_clip
 from os import path as osp
 
+from .utils import default, exists, zero_module, GEGLU
+
 from ldm.modules.diffusionmodules.model import Decoder, Encoder
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 
@@ -351,3 +353,18 @@ class AttentionBlock(nn.Module):
         # output
         x = self.proj(x)
         return x + identity
+
+class FeedForward(nn.Module):
+
+    def __init__(self, dim, dim_out=None, mult=4, glu=False, dropout=0.):
+        super().__init__()
+        inner_dim = int(dim * mult)
+        dim_out = default(dim_out, dim)
+        project_in = nn.Sequential(nn.Linear(
+            dim, inner_dim), nn.GELU()) if not glu else GEGLU(dim, inner_dim)
+
+        self.net = nn.Sequential(project_in, nn.Dropout(dropout),
+                                 nn.Linear(inner_dim, dim_out))
+
+    def forward(self, x):
+        return self.net(x)

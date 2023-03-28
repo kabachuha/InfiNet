@@ -21,6 +21,11 @@ from einops import rearrange, repeat
 import open_clip
 from os import path as osp
 
+from ldm.modules.diffusionmodules.model import Decoder, Encoder
+from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
+
+from .utils import torch_gc
+
 class AutoencoderKL(nn.Module):
 
     def __init__(self,

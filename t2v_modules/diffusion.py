@@ -24,6 +24,8 @@ from os import path as osp
 from ldm.modules.diffusionmodules.model import Decoder, Encoder
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution
 
+from .utils import _i, torch_gc
+
 def beta_schedule(schedule,
                   num_timesteps=1000,
                   init_beta=None,
