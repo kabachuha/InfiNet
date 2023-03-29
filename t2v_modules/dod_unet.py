@@ -263,7 +263,6 @@ class UNet_with_Infinet_SD(nn.Module):
                 if self.use_infinet:
                     self.infinet.input_blocks_injections.append(DoDBlock(in_dim,
                         embed_dim,
-                        dropout,
                         out_channels=out_dim,
                         depth=j
                     ))
@@ -364,7 +363,6 @@ class UNet_with_Infinet_SD(nn.Module):
                 if self.use_infinet:
                     self.infinet.output_blocks_injections.append(DoDBlock(in_dim + shortcut_dims.pop(),
                         embed_dim,
-                        dropout,
                         out_channels=out_dim,
                         depth=j
                     ))
