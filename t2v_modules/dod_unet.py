@@ -261,12 +261,14 @@ class UNet_with_Infinet_SD(nn.Module):
                     )
                 ])
                 if self.use_infinet:
+                    # actually, doesn't add this to the main blocks,
+                    # but to the infinet subnetwork
+                    # or else it will break the loading process
                     self.infinet.input_blocks_injections.append(DoDBlock(self.in_dim,
                         embed_dim,
                         out_channels=out_dim,
                         depth=j
                     ))
-                    block.append(self.infinet.input_blocks_injections[-1])
 
                 if scale in attn_scales:
                     block.append(
@@ -361,12 +363,14 @@ class UNet_with_Infinet_SD(nn.Module):
                 ])
 
                 if self.use_infinet:
+                    # actually, doesn't add this to the main blocks,
+                    # but to the infinet subnetwork
+                    # or else it will break the loading process
                     self.infinet.output_blocks_injections.append(DoDBlock(self.in_dim,
                         embed_dim,
                         out_channels=out_dim,
                         depth=j
                     ))
-                    block.append(self.infinet.output_blocks_injections[-1])
 
                 if scale in attn_scales:
                     block.append(
@@ -542,10 +546,22 @@ class UNet_with_Infinet_SD(nn.Module):
         elif isinstance(module, Resample):
             x = module(x, reference)
         elif isinstance(module, nn.ModuleList):
+            inf_idx = 0
             for block in module:
                 x = self._forward_single(block, x, e, context,
                                          time_rel_pos_bias, focus_present_mask,
                                          video_mask, reference, x_c, x_m)
+                # Assuming there's always a match in the infinet for each U-net Up/Downblock
+                if 'input_blocks' in module._get_name():
+                    self._forward_single(self.infinet.input_blocks_injections[inf_idx], x, e, context,
+                                         time_rel_pos_bias, focus_present_mask,
+                                         video_mask, reference, x_c, x_m)
+                    inf_idx += 1
+                elif 'output_blocks' in module._get_name():
+                    self._forward_single(self.infinet.output_blocks_injections[inf_idx], x, e, context,
+                                         time_rel_pos_bias, focus_present_mask,
+                                         video_mask, reference, x_c, x_m)
+                    inf_idx += 1
         else:
             x = module(x)
         return x
