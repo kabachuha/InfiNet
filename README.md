@@ -10,6 +10,8 @@ This repo contains the code of ModelScope's text2video model with InfiNet being 
 
 The InfiNet module itself is located here https://github.com/kabachuha/InfiNet/blob/master/t2v_modules/dod_unet.py
 
+The key difference with ControlNet is that this model has to control both Upsample and Downsample blocks, whereas ControlNet controls only the Upsample blocks, so it couldn't be just another fine-tuned CN.
+
 ### References
 
 1. StabilityAI's Stable Diffusion https://github.com/CompVis/stable-diffusion
