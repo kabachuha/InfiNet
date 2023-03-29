@@ -48,7 +48,7 @@ class DoDBlock(nn.Module):
         self.channels = channels
         self.out_channels = out_channels or channels
         self.dims = dims
-        stride = (1, 2, 2)**depth # if depth is zero, the stride is 1
+        stride = (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
 
         # Convolution block, which should be initialized with zero weights and biases
         # (zero conv)
