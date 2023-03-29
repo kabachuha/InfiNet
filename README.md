@@ -1,11 +1,15 @@
-# OverFusion
-Implementation of DiffusionOverDiffusion architecture and training presented in NUWA-XL based on modified ModelScope text2video model for extremely long video generation
+# InfiNet
 
-Plan:
+*WIP, tests are to be done!*
 
-0. Switch to PyTorch 2 for speed
-1. Adapt the ModelScope code to NUWA-XL DiffusionOverDiffusion architecture
-2. Add the training code https://github.com/CompVis/stable-diffusion/blob/main/main.py and adapt it to DiffusionOverDiffusion training
-3. Make test trainings and find the best hyperparams
-4. ???
-5. Profit
+InfiNet — ControlNet-like structure for video diffusion (Unet3D-based) models allowing them to train on arbitrary long videos and as result produce extremely long videos on consumer PCs via the DiffusionOverDiffusion architecture proposed by Microsoft in https://arxiv.org/abs/2303.12346 for their NUWA-XL model.
+
+Thanks to it utilizing so-called *zero-convolutions*, it's possible to add the InfiNet model on top of an already pretrained U-net to save resources.
+
+This repo contains the code of ModelScope's text2video model with InfiNet being injected into it directly. After I test whether it works, I'll try to figure out a more elegant way to hijack it.
+
+### References
+
+1. StabilityAI's Stable Diffusion https://github.com/CompVis/stable-diffusion
+2. Microsoft's NUWA-XL: Diffusion over Diffusion for eXtremely Long Video Generation https://arxiv.org/abs/2303.12346
+3. lllyasviel's ControlNet https://github.com/lllyasviel/ControlNet
