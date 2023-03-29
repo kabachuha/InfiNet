@@ -6,7 +6,7 @@ InfiNet — ControlNet-like structure for video diffusion (Unet3D-based) models 
 
 Thanks to it utilizing so-called *zero-convolutions*, it's possible to add the InfiNet model on top of an already pretrained U-net to save resources.
 
-This repo contains the code of ModelScope's text2video model with InfiNet being injected into it directly. After I test whether it works, I'll try to figure out a more elegant way to hijack it.
+This repo contains the code of ModelScope's text2video model with InfiNet being injected into it by appending it as a submodule and hijacking the `forward` function.
 
 The InfiNet module itself is located here https://github.com/kabachuha/InfiNet/blob/master/t2v_modules/dod_unet.py
 
