@@ -105,8 +105,52 @@ class DoDBlock(nn.Module):
         h = x_m_w * h + x_m_b + h # uses hadamard product
         
         return h
+    
+    def _init_weights(self):
+        # Zero initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.constant_(m.weight, 0)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
 
-class DoDUNetSD(nn.Module):
+# Class to keep DiffusionOverDiffusion modules as a separate model
+# with weights saveable as a detachable checkpoint
+class InfiNet(nn.Module):
+    def __init__(self,
+                 in_dim=7,
+                 dim=512,
+                 y_dim=512,
+                 context_dim=512,
+                 out_dim=6,
+                 dim_mult=[1, 2, 3, 4],
+                 num_res_blocks=3,
+                 dropout=0.1):
+        super(InfiNet, self).__init__()
+        self.in_dim = in_dim
+        self.dim = dim
+        self.y_dim = y_dim
+        self.context_dim = context_dim
+        self.out_dim = out_dim
+        self.dim_mult = dim_mult
+        self.num_res_blocks = num_res_blocks
+        self.dropout = dropout
+
+        self.input_blocks_injections = nn.ModuleList()
+        self.output_blocks_injections = nn.ModuleList()
+    
+    def _init_weights(self):
+        # Zero initialization
+        for m in self.modules():
+            if isinstance(m, DoDBlock):
+                m._init_weights()
+            if isinstance(m, nn.ModuleList):
+                for l in m:
+                    if isinstance(l, DoDBlock):
+                        l._init_weights()
+
+# TODO: There should be a better way to do hijack it, but I don't want to bother with it atm
+class UNet_with_Infinet_SD(nn.Module):
 
     def __init__(self,
                  in_dim=7,
@@ -126,10 +170,11 @@ class DoDUNetSD(nn.Module):
                  use_checkpoint=False,
                  use_image_dataset=False,
                  use_fps_condition=False,
-                 use_sim_mask=False):
+                 use_sim_mask=False,
+                 use_infinet=True,):
         embed_dim = dim * 4
         num_heads = num_heads if num_heads else dim // 32
-        super(DoDUNetSD, self).__init__()
+        super(UNet_with_Infinet_SD, self).__init__()
         self.in_dim = in_dim
         self.dim = dim
         self.y_dim = y_dim
@@ -150,6 +195,7 @@ class DoDUNetSD(nn.Module):
         self.use_fps_condition = use_fps_condition
         self.use_sim_mask = use_sim_mask
         use_linear_in_temporal = False
+        self.use_infinet = use_infinet
         transformer_depth = 1
         disabled_sa = False
         # params
@@ -169,6 +215,18 @@ class DoDUNetSD(nn.Module):
                 nn.Linear(embed_dim, embed_dim))
             nn.init.zeros_(self.fps_embedding[-1].weight)
             nn.init.zeros_(self.fps_embedding[-1].bias)
+
+        if self.use_infinet:
+            # Introduce InfiNet
+            self.infinet = InfiNet(
+                in_dim=in_dim,
+                dim=dim,
+                y_dim=y_dim,
+                context_dim=context_dim,
+                out_dim=out_dim,
+                dim_mult=dim_mult,
+                num_res_blocks=num_res_blocks,
+                dropout=dropout)
 
         # encoder
         self.input_blocks = nn.ModuleList()
@@ -202,6 +260,15 @@ class DoDUNetSD(nn.Module):
                         use_image_dataset=use_image_dataset,
                     )
                 ])
+                if self.use_infinet:
+                    self.infinet.input_blocks_injections.append(DoDBlock(in_dim,
+                        embed_dim,
+                        dropout,
+                        out_channels=out_dim,
+                        depth=j
+                    ))
+                    block.append(self.infinet.input_blocks_injections[-1])
+
                 if scale in attn_scales:
                     block.append(
                         SpatialTransformer(
@@ -293,6 +360,16 @@ class DoDUNetSD(nn.Module):
                         use_image_dataset=use_image_dataset,
                     )
                 ])
+
+                if self.use_infinet:
+                    self.infinet.output_blocks_injections.append(DoDBlock(in_dim + shortcut_dims.pop(),
+                        embed_dim,
+                        dropout,
+                        out_channels=out_dim,
+                        depth=j
+                    ))
+                    block.append(self.infinet.output_blocks_injections[-1])
+
                 if scale in attn_scales:
                     block.append(
                         SpatialTransformer(
@@ -333,16 +410,21 @@ class DoDUNetSD(nn.Module):
         # zero out the last layer params
         nn.init.zeros_(self.out[-1].weight)
 
+        # zero out the infinet
+        if self.use_infinet:
+            self.infinet._init_weights()
+
     def forward(
             self,
-            x,
-            t,
-            y,
+            x, # (B, T, C, H, W) - latent variables of the original video
+            t, # timesteps
+            y, # text conditioning
             fps=None,
             video_mask=None,
             focus_present_mask=None,
             prob_focus_present=0.,
-            mask_last_frame_num=0  # mask last frame num
+            mask_last_frame_num=0,  # mask last frame num
+            diffusion_depth=0, # Whether we are concerned with making the overall keyframes or filling in the gaps
     ):
         """
         prob_focus_present: probability at which a given batch sample will focus on the present
@@ -375,13 +457,29 @@ class DoDUNetSD(nn.Module):
         e = e.repeat_interleave(repeats=f, dim=0)
         context = context.repeat_interleave(repeats=f, dim=0)
 
+        # If aiming for DiffusionOverDiffusion and have InfiNet enabled, keep the original video
+        # + its mask of the first and last frames
+
+        if self.use_infinet and diffusion_depth > 0:
+            x_c = x.clone().detach()
+            x_m = torch.zeros_like(x_c)
+            x_m[:, :, 0, :, :] = torch.ones_like(x_c[:, :, 0, :, :])
+            x_m[:, :, -1, :, :] = torch.ones_like(x_c[:, :, -1, :, :])
+            x_c = rearrange(x_c, 'b c f h w -> (b f) c h w')
+            x_m = rearrange(x_m, 'b c f h w -> (b f) c h w')
+        else:
+            x_c = None
+            x_m = None
+
         # always in shape (b f) c h w, except for temporal layer
         x = rearrange(x, 'b c f h w -> (b f) c h w')
+
         # encoder
         xs = []
         for block in self.input_blocks:
             x = self._forward_single(block, x, e, context, time_rel_pos_bias,
-                                     focus_present_mask, video_mask)
+                                     focus_present_mask, video_mask,
+                                     x_c=x_c, x_m=x_m)
             xs.append(x)
 
         # middle
@@ -400,7 +498,8 @@ class DoDUNetSD(nn.Module):
                 time_rel_pos_bias,
                 focus_present_mask,
                 video_mask,
-                reference=xs[-1] if len(xs) > 0 else None)
+                reference=xs[-1] if len(xs) > 0 else None,
+                x_c=x_c, x_m=x_m)
 
         # head
         x = self.out(x)
@@ -416,7 +515,8 @@ class DoDUNetSD(nn.Module):
                         time_rel_pos_bias,
                         focus_present_mask,
                         video_mask,
-                        reference=None):
+                        reference=None,
+                        x_c=None, x_m=None):
         if isinstance(module, ResidualBlock):
             x = x.contiguous()
             x = module(x, e, reference)
@@ -439,13 +539,15 @@ class DoDUNetSD(nn.Module):
             x = module(x)
         elif isinstance(module, Downsample):
             x = module(x)
+        elif isinstance(module, DoDBlock):
+            x = module(x, x_c, x_m)
         elif isinstance(module, Resample):
             x = module(x, reference)
         elif isinstance(module, nn.ModuleList):
             for block in module:
                 x = self._forward_single(block, x, e, context,
                                          time_rel_pos_bias, focus_present_mask,
-                                         video_mask, reference)
+                                         video_mask, reference, x_c, x_m)
         else:
             x = module(x)
         return x
