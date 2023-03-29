@@ -28,8 +28,83 @@ from .attention import *
 from .conv_blocks import *
 from .utils import sinusoidal_embedding, prob_mask_like
 
-## NOTE: it's just the copypasted U-net at the moment
-## The DOD-layers are yet to be added
+
+class DoDBlock(nn.Module):
+    """
+    A downconvolution layer with masked video latents
+    Gets the masked video latents (the first and the last frame) and makes a masked convolution
+    :param channels: channels in the inputs and outputs.
+    :param use_conv: a bool determining if a convolution is applied.
+    :param dims: Always 3D, downsampling occurs in the inner-two dimensions.
+    """
+
+    def __init__(self,
+                 channels,
+                 dims=3,
+                 depth=0,
+                 out_channels=None,
+                 padding=1):
+        super().__init__()
+        self.channels = channels
+        self.out_channels = out_channels or channels
+        self.dims = dims
+        stride = (1, 2, 2)**depth # if depth is zero, the stride is 1
+
+        # Convolution block, which should be initialized with zero weights and biases
+        # (zero conv)
+        self.conv_w = nn.Conv2d(
+            self.channels,
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+        
+        self.conv_b = nn.Conv2d(
+            self.channels,
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+        
+        # Conv for masking
+        self.mask_conv_w = nn.Conv2d(
+            1, # only black and white
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+        
+        self.mask_conv_b = nn.Conv2d(
+            1, # only black and white
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+
+    # h - hidden states, x_c - frame conditioning, x_m - masked video latents
+    def forward(self, h, x_c=None, x_m=None):
+
+        # When no frame conditioning is provided (top DoD iteration)
+        # return the untouched hidden states
+        if x_c is None or x_m is None:
+            return h
+
+        # Add image conditioning as linear operation
+
+        # get weights and biases from frame conditioning
+        # vid convolution (initialized with zero weights and biases at first)
+        x_c_w = self.conv_w(x_c)
+        x_c_b = self.conv_b(x_c)
+        
+        h = x_c_w * h + x_c_b + h # uses hadamard product
+
+        # Use masked video latents to mask the convolution
+        x_m_w = self.mask_conv_w(x_m)
+        x_m_b = self.mask_conv_b(x_m)
+
+        h = x_m_w * h + x_m_b + h # uses hadamard product
+        
+        return h
 
 class DoDUNetSD(nn.Module):
 
