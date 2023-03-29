@@ -8,6 +8,8 @@ Thanks to it utilizing so-called *zero-convolutions*, it's possible to add the I
 
 This repo contains the code of ModelScope's text2video model with InfiNet being injected into it directly. After I test whether it works, I'll try to figure out a more elegant way to hijack it.
 
+The InfiNet module itself is located here https://github.com/kabachuha/InfiNet/blob/master/t2v_modules/dod_unet.py
+
 ### References
 
 1. StabilityAI's Stable Diffusion https://github.com/CompVis/stable-diffusion
