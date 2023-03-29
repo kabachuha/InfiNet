@@ -8,7 +8,7 @@
 # This project aims to implement NUWA-XL Diffusion over Diffusion laid out by Microsoft in https://arxiv.org/pdf/2303.12346.pdf
 # ---
 # The *unofficial implementation* conducted by the Deforum-art organization under the supervision of kabachuha
-# TODO: add a proper license (openrails or apache) before releasing
+# Apache 2.0 license
 
 import importlib
 import math
