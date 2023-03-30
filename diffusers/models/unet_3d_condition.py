@@ -154,10 +154,6 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             in_channels, block_out_channels[0], kernel_size=conv_in_kernel, padding=conv_in_padding
         )
 
-        # input infinet block
-        if self.use_infinet:
-            self.infinet.input_blocks_injections.append(DoDBlock(in_channels, 3, 0, block_out_channels[0], conv_in_padding))
-
         # time
         time_embed_dim = block_out_channels[0] * 4
         self.time_proj = Timesteps(block_out_channels[0], True, 0)
