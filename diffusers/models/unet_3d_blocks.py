@@ -19,6 +19,92 @@ from diffusers.models.resnet import Downsample2D, ResnetBlock2D, TemporalConvLay
 from diffusers.models.transformer_2d import Transformer2DModel
 from diffusers.models.transformer_temporal import TransformerTemporalModel
 
+class DoDBlock(nn.Module):
+    """
+    A downconvolution layer with masked video latents
+    Gets the masked video latents (the first and the last frame) and makes a masked convolution
+    :param channels: channels in the inputs and outputs.
+    :param use_conv: a bool determining if a convolution is applied.
+    :param dims: Always 3D, downsampling occurs in the inner-two dimensions.
+    """
+
+    def __init__(self,
+                 channels,
+                 dims=3,
+                 depth=0,
+                 out_channels=None,
+                 padding=1):
+        super().__init__()
+        self.channels = channels
+        self.out_channels = out_channels or channels
+        self.dims = dims
+        stride = 2**dims if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
+
+        # Convolution block, which should be initialized with zero weights and biases
+        # (zero conv)
+        self.conv_w = nn.Conv2d(
+            self.channels,
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+        
+        self.conv_b = nn.Conv2d(
+            self.channels,
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+        
+        # Conv for masking
+        self.mask_conv_w = nn.Conv2d(
+            1, # only black and white
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+        
+        self.mask_conv_b = nn.Conv2d(
+            1, # only black and white
+            self.out_channels,
+            3,
+            stride=stride,
+            padding=padding)
+
+    # h - hidden states, x_c - frame conditioning, x_m - masked video latents
+    def forward(self, h, x_c=None, x_m=None):
+
+        # When no frame conditioning is provided (top DoD iteration)
+        # return the untouched hidden states
+        if x_c is None or x_m is None:
+            return h
+
+        # Add image conditioning as linear operation
+
+        # get weights and biases from frame conditioning
+        # vid convolution (initialized with zero weights and biases at first)
+        x_c_w = self.conv_w(x_c)
+        x_c_b = self.conv_b(x_c)
+        
+        h = x_c_w * h + x_c_b + h # uses hadamard product
+
+        # Use masked video latents to mask the convolution
+        x_m_w = self.mask_conv_w(x_m)
+        x_m_b = self.mask_conv_b(x_m)
+
+        h = x_m_w * h + x_m_b + h # uses hadamard product
+        
+        return h
+    
+    def _init_weights(self):
+        # Zero initialization
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.constant_(m.weight, 0)
+                if m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+
+
 # Assign gradient checkpoint function to simple variable for readability.
 g_c = checkpoint.checkpoint
 
@@ -119,6 +205,7 @@ def get_down_block(
     only_cross_attention=False,
     upcast_attention=False,
     resnet_time_scale_shift="default",
+    infinet=None,
 ):
     if down_block_type == "DownBlock3D":
         return DownBlock3D(
@@ -132,6 +219,7 @@ def get_down_block(
             resnet_groups=resnet_groups,
             downsample_padding=downsample_padding,
             resnet_time_scale_shift=resnet_time_scale_shift,
+            infinet=infinet,
         )
     elif down_block_type == "CrossAttnDownBlock3D":
         if cross_attention_dim is None:
@@ -153,6 +241,7 @@ def get_down_block(
             only_cross_attention=only_cross_attention,
             upcast_attention=upcast_attention,
             resnet_time_scale_shift=resnet_time_scale_shift,
+            infinet=infinet,
         )
     raise ValueError(f"{down_block_type} does not exist.")
 
@@ -175,6 +264,7 @@ def get_up_block(
     only_cross_attention=False,
     upcast_attention=False,
     resnet_time_scale_shift="default",
+    infinet=None,
 ):
     if up_block_type == "UpBlock3D":
         return UpBlock3D(
@@ -188,6 +278,7 @@ def get_up_block(
             resnet_act_fn=resnet_act_fn,
             resnet_groups=resnet_groups,
             resnet_time_scale_shift=resnet_time_scale_shift,
+            infinet=infinet,
         )
     elif up_block_type == "CrossAttnUpBlock3D":
         if cross_attention_dim is None:
@@ -209,6 +300,7 @@ def get_up_block(
             only_cross_attention=only_cross_attention,
             upcast_attention=upcast_attention,
             resnet_time_scale_shift=resnet_time_scale_shift,
+            infinet=infinet,
         )
     raise ValueError(f"{up_block_type} does not exist.")
 
@@ -373,6 +465,7 @@ class CrossAttnDownBlock3D(nn.Module):
         use_linear_projection=False,
         only_cross_attention=False,
         upcast_attention=False,
+        infinet=None,
     ):
         super().__init__()
         resnets = []
@@ -406,6 +499,16 @@ class CrossAttnDownBlock3D(nn.Module):
                     out_channels,
                 )
             )
+
+            if infinet is not None:
+                infinet.input_blocks_injections.append(DoDBlock(
+                        infinet.input_blocks_injections[0].conv_w.in_channels,
+                        3,
+                        len(infinet.input_blocks_injections),
+                        out_channels
+                    )
+                )
+
             attentions.append(
                 Transformer2DModel(
                     out_channels // attn_num_head_channels,
@@ -511,6 +614,7 @@ class DownBlock3D(nn.Module):
         output_scale_factor=1.0,
         add_downsample=True,
         downsample_padding=1,
+        infinet=None,
     ):
         super().__init__()
         resnets = []
@@ -539,6 +643,15 @@ class DownBlock3D(nn.Module):
                     out_channels,
                 )
             )
+
+            if infinet is not None:
+                infinet.input_blocks_injections.append(DoDBlock(
+                        infinet.input_blocks_injections[0].conv_w.in_channels,
+                        3,
+                        len(infinet.input_blocks_injections),
+                        out_channels
+                    )
+                )
 
         self.resnets = nn.ModuleList(resnets)
         self.temp_convs = nn.ModuleList(temp_convs)
@@ -597,6 +710,7 @@ class CrossAttnUpBlock3D(nn.Module):
         use_linear_projection=False,
         only_cross_attention=False,
         upcast_attention=False,
+        infinet=None,
     ):
         super().__init__()
         resnets = []
@@ -632,6 +746,16 @@ class CrossAttnUpBlock3D(nn.Module):
                     out_channels,
                 )
             )
+
+            if infinet is not None:
+                infinet.output_blocks_injections.append(DoDBlock(
+                        infinet.output_blocks_injections[0].conv_w.in_channels,
+                        3,
+                        len(infinet.output_blocks_injections),
+                        out_channels
+                    )
+                )
+
             attentions.append(
                 Transformer2DModel(
                     out_channels // attn_num_head_channels,
@@ -731,6 +855,7 @@ class UpBlock3D(nn.Module):
         resnet_pre_norm: bool = True,
         output_scale_factor=1.0,
         add_upsample=True,
+        infinet=None,
     ):
         super().__init__()
         resnets = []
@@ -760,6 +885,15 @@ class UpBlock3D(nn.Module):
                     out_channels,
                 )
             )
+
+            if infinet is not None:
+                infinet.output_blocks_injections.append(DoDBlock(
+                        infinet.output_blocks_injections[0].conv_w.in_channels,
+                        3,
+                        len(infinet.output_blocks_injections),
+                        out_channels
+                    )
+                )
 
         self.resnets = nn.ModuleList(resnets)
         self.temp_convs = nn.ModuleList(temp_convs)
