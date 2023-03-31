@@ -276,6 +276,10 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         self.conv_out = nn.Conv2d(
             block_out_channels[0], out_channels, kernel_size=conv_out_kernel, padding=conv_out_padding
         )
+        
+        if use_infinet:
+
+            self.infinet._init_weights()
 
     def set_attention_slice(self, slice_size):
         r"""
