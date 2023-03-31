@@ -359,6 +359,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         down_block_additional_residuals: Optional[Tuple[torch.Tensor]] = None,
         mid_block_additional_residual: Optional[torch.Tensor] = None,
         return_dict: bool = True,
+        diffusion_depth: int = 0,
     ) -> Union[UNet3DConditionOutput, Tuple]:
         r"""
         Args:
@@ -425,15 +426,31 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         emb = emb.repeat_interleave(repeats=num_frames, dim=0)
         encoder_hidden_states = encoder_hidden_states.repeat_interleave(repeats=num_frames, dim=0)
 
+        # If aiming for DiffusionOverDiffusion and have InfiNet enabled, keep the original video
+        # + its mask of the first and last frames
+
+        if self.use_infinet and diffusion_depth > 0:
+            x_c = sample.clone().detach()
+            x_m = torch.zeros_like(x_c)
+            x_m[:, :, 0, :, :] = torch.ones_like(x_c[:, :, 0, :, :])
+            x_m[:, :, -1, :, :] = torch.ones_like(x_c[:, :, -1, :, :])
+            x_c = x_c.permute(0, 2, 1, 3, 4).reshape((x_c.shape[0] * num_frames, -1) + x_c.shape[3:])
+            x_m = x_m.permute(0, 2, 1, 3, 4).reshape((x_m.shape[0] * num_frames, -1) + x_m.shape[3:])
+        else:
+            x_c = None
+            x_m = None
+
         # 2. pre-process
         sample = sample.permute(0, 2, 1, 3, 4).reshape((sample.shape[0] * num_frames, -1) + sample.shape[3:])
         sample = self.conv_in(sample)
+
+        # InfiNet TODO: do we have to add a module injection here as well?
 
         sample = self.transformer_in(sample, num_frames=num_frames).sample
 
         # 3. down
         down_block_res_samples = (sample,)
-        for downsample_block in self.down_blocks:
+        for i, downsample_block in enumerate(self.down_blocks):
             if hasattr(downsample_block, "has_cross_attention") and downsample_block.has_cross_attention:
                 sample, res_samples = downsample_block(
                     hidden_states=sample,
@@ -442,9 +459,12 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                     attention_mask=attention_mask,
                     num_frames=num_frames,
                     cross_attention_kwargs=cross_attention_kwargs,
+                    dod_block=self.infinet.input_blocks_injections[i] if self.infinet is not None else None,
+                    x_c=x_c,
+                    x_m=x_m,
                 )
             else:
-                sample, res_samples = downsample_block(hidden_states=sample, temb=emb, num_frames=num_frames)
+                sample, res_samples = downsample_block(hidden_states=sample, temb=emb, num_frames=num_frames, dod_block=self.infinet.input_blocks_injections[i] if self.infinet is not None else None, x_c=x_c, x_m=x_m,)
 
             down_block_res_samples += res_samples
 
@@ -495,6 +515,9 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                     attention_mask=attention_mask,
                     num_frames=num_frames,
                     cross_attention_kwargs=cross_attention_kwargs,
+                    dod_block=self.infinet.output_blocks_injections[i] if self.infinet is not None else None,
+                    x_c=x_c,
+                    x_m=x_m,
                 )
             else:
                 sample = upsample_block(
@@ -503,6 +526,9 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                     res_hidden_states_tuple=res_samples,
                     upsample_size=upsample_size,
                     num_frames=num_frames,
+                    dod_block=self.infinet.output_blocks_injections[i] if self.infinet is not None else None,
+                    x_c=x_c,
+                    x_m=x_m,
                 )
 
         # 6. post-process

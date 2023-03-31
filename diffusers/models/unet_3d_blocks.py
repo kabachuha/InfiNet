@@ -556,6 +556,9 @@ class CrossAttnDownBlock3D(nn.Module):
         attention_mask=None,
         num_frames=1,
         cross_attention_kwargs=None,
+        dod_block=None,
+        x_c=None,
+        x_m=None,
     ):
         # TODO(Patrick, William) - attention mask is not used
         output_states = ()
@@ -565,6 +568,8 @@ class CrossAttnDownBlock3D(nn.Module):
         ):
         
             if self.gradient_checkpointing:
+                # TODO: Infinet is not implemented here yet!
+                # so don't use it for now with gradient checkpointing on
                 hidden_states = cross_attn_g_c(
                         attn, 
                         temp_attn, 
@@ -580,6 +585,10 @@ class CrossAttnDownBlock3D(nn.Module):
             else:
                 hidden_states = resnet(hidden_states, temb)
                 hidden_states = temp_conv(hidden_states, num_frames=num_frames)
+
+                if dod_block is not None:
+                    hidden_states = dod_block(hidden_states, x_c, x_m)
+
                 hidden_states = attn(
                     hidden_states,
                     encoder_hidden_states=encoder_hidden_states,
@@ -667,7 +676,7 @@ class DownBlock3D(nn.Module):
         else:
             self.downsamplers = None
 
-    def forward(self, hidden_states, temb=None, num_frames=1):
+    def forward(self, hidden_states, temb=None, num_frames=1, dod_block=None, x_c=None, x_m=None,):
         output_states = ()
 
         for resnet, temp_conv in zip(self.resnets, self.temp_convs):
@@ -676,6 +685,9 @@ class DownBlock3D(nn.Module):
             else:
                 hidden_states = resnet(hidden_states, temb)
                 hidden_states = temp_conv(hidden_states, num_frames=num_frames)
+            
+            if dod_block is not None:
+                hidden_states = dod_block(hidden_states, x_c, x_m)
 
             output_states += (hidden_states,)
 
@@ -799,6 +811,9 @@ class CrossAttnUpBlock3D(nn.Module):
         attention_mask=None,
         num_frames=1,
         cross_attention_kwargs=None,
+        dod_block=None,
+        x_c=None,
+        x_m=None,
     ):
         # TODO(Patrick, William) - attention mask is not used
         for resnet, temp_conv, attn, temp_attn in zip(
@@ -810,6 +825,8 @@ class CrossAttnUpBlock3D(nn.Module):
             hidden_states = torch.cat([hidden_states, res_hidden_states], dim=1)
 
             if self.gradient_checkpointing:
+                # TODO: Infinet is not implemented here yet!
+                # so don't use it with gradient checkpointing
                 hidden_states = cross_attn_g_c(
                         attn, 
                         temp_attn, 
@@ -825,6 +842,10 @@ class CrossAttnUpBlock3D(nn.Module):
             else:
                 hidden_states = resnet(hidden_states, temb)
                 hidden_states = temp_conv(hidden_states, num_frames=num_frames)
+
+                if dod_block is not None:
+                    hidden_states = dod_block(hidden_states, x_c, x_m)
+
                 hidden_states = attn(
                     hidden_states,
                     encoder_hidden_states=encoder_hidden_states,
@@ -903,7 +924,7 @@ class UpBlock3D(nn.Module):
         else:
             self.upsamplers = None
 
-    def forward(self, hidden_states, res_hidden_states_tuple, temb=None, upsample_size=None, num_frames=1):
+    def forward(self, hidden_states, res_hidden_states_tuple, temb=None, upsample_size=None, num_frames=1, dod_block=None, x_c=None, x_m=None,):
         for resnet, temp_conv in zip(self.resnets, self.temp_convs):
             # pop res hidden states
             res_hidden_states = res_hidden_states_tuple[-1]
@@ -915,6 +936,9 @@ class UpBlock3D(nn.Module):
             else:
                 hidden_states = resnet(hidden_states, temb)
                 hidden_states = temp_conv(hidden_states, num_frames=num_frames)
+            
+            if dod_block is not None:
+                hidden_states = dod_block(hidden_states, x_c, x_m)
 
         if self.upsamplers is not None:
             for upsampler in self.upsamplers:
