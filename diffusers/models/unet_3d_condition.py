@@ -41,8 +41,10 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 # Class to keep DiffusionOverDiffusion modules as a separate model
 # with weights saveable as a detachable checkpoint
 class InfiNet(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels):
         super(InfiNet, self).__init__()
+
+        self.in_channels = in_channels
 
         self.input_blocks_injections = nn.ModuleList()
         self.output_blocks_injections = nn.ModuleList()
@@ -178,7 +180,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
 
         if self.use_infinet:
             # InfiNet insertion
-            self.infinet = InfiNet()
+            self.infinet = InfiNet(in_channels)
 
         if isinstance(attention_head_dim, int):
             attention_head_dim = (attention_head_dim,) * len(down_block_types)

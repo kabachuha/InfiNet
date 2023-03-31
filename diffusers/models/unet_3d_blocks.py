@@ -502,7 +502,7 @@ class CrossAttnDownBlock3D(nn.Module):
 
             if infinet is not None:
                 infinet.input_blocks_injections.append(DoDBlock(
-                        infinet.input_blocks_injections[0].conv_w.in_channels,
+                        infinet.in_channels,
                         3,
                         len(infinet.input_blocks_injections),
                         out_channels
@@ -655,7 +655,7 @@ class DownBlock3D(nn.Module):
 
             if infinet is not None:
                 infinet.input_blocks_injections.append(DoDBlock(
-                        infinet.input_blocks_injections[0].conv_w.in_channels,
+                        infinet.in_channels,
                         3,
                         len(infinet.input_blocks_injections),
                         out_channels
@@ -761,7 +761,7 @@ class CrossAttnUpBlock3D(nn.Module):
 
             if infinet is not None:
                 infinet.output_blocks_injections.append(DoDBlock(
-                        infinet.output_blocks_injections[0].conv_w.in_channels,
+                        infinet.in_channels,
                         3,
                         len(infinet.output_blocks_injections),
                         out_channels
@@ -909,7 +909,7 @@ class UpBlock3D(nn.Module):
 
             if infinet is not None:
                 infinet.output_blocks_injections.append(DoDBlock(
-                        infinet.output_blocks_injections[0].conv_w.in_channels,
+                        infinet.in_channels,
                         3,
                         len(infinet.output_blocks_injections),
                         out_channels
