@@ -553,9 +553,12 @@ class UNet_with_Infinet_SD(nn.Module):
                                          video_mask, reference, x_c, x_m)
                 # Assuming there's always a match in the infinet for each U-net Up/Downblock
                 if 'input_blocks' in module._get_name():
-                    self._forward_single(self.infinet.input_blocks_injections[inf_idx], x, e, context,
-                                         time_rel_pos_bias, focus_present_mask,
-                                         video_mask, reference, x_c, x_m)
+                    # InfiNet TODO: figure out whether to apply it to the first block as well
+                    # before that, skipping the first block
+                    if inf_idx > 0:
+                        self._forward_single(self.infinet.input_blocks_injections[inf_idx-1], x, e, context,
+                                            time_rel_pos_bias, focus_present_mask,
+                                            video_mask, reference, x_c, x_m)
                     inf_idx += 1
                 elif 'output_blocks' in module._get_name():
                     self._forward_single(self.infinet.output_blocks_injections[inf_idx], x, e, context,
