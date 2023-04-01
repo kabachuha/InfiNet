@@ -84,7 +84,7 @@ def load_primary_models(pretrained_model_path):
         model_path,
         map_location=torch.device('cuda'),
     )
-    unet.load_state_dict(pretrained_dict)
+    unet.load_state_dict(pretrained_dict, strict=False)
 
     unet.infinet._init_weights()
 
