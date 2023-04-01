@@ -36,7 +36,7 @@ class DoDBlock(nn.Module):
                  padding=1):
         super().__init__()
         self.channels = channels
-        self.out_channels = min(out_channels * (2**depth), 1280)
+        self.out_channels = (out_channels or channels) * (2 ** depth)
         self.dims = dims
         stride = 2**depth if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
 
@@ -80,11 +80,20 @@ class DoDBlock(nn.Module):
             return h
 
         # Add image conditioning as linear operation
+        
+        print('h', h.shape)
+        print('xc', x_c.shape)
+        print('xm', x_m.shape)
+        
+        print('cw', self.conv_w.weight.shape)
 
         # get weights and biases from frame conditioning
         # vid convolution (initialized with zero weights and biases at first)
         x_c_w = self.conv_w(x_c)
         x_c_b = self.conv_b(x_c)
+        
+        print('xcw', x_c_w.shape)
+        print('xcb', x_c_b.shape)
         
         h = x_c_w * h + x_c_b + h # uses hadamard product
 
@@ -881,7 +890,7 @@ class UpBlock3D(nn.Module):
         super().__init__()
         resnets = []
         temp_convs = []
-        self.gradient_checkpointing = False
+        self.gradient_checkpointing=False
 
         for i in range(num_layers):
             res_skip_channels = in_channels if (i == num_layers - 1) else out_channels
