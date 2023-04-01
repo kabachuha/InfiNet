@@ -38,7 +38,7 @@ class DoDBlock(nn.Module):
         self.channels = channels
         self.out_channels = out_channels or channels
         self.dims = dims
-        stride = 2**dims if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
+        stride = 2**depth if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
 
         # Convolution block, which should be initialized with zero weights and biases
         # (zero conv)
@@ -503,7 +503,7 @@ class CrossAttnDownBlock3D(nn.Module):
             if infinet is not None:
                 infinet.input_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
-                        3,
+                        2,
                         len(infinet.input_blocks_injections),
                         out_channels
                     )
@@ -656,7 +656,7 @@ class DownBlock3D(nn.Module):
             if infinet is not None:
                 infinet.input_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
-                        3,
+                        2, # dims
                         len(infinet.input_blocks_injections),
                         out_channels
                     )
