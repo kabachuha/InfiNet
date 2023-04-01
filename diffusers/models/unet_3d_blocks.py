@@ -881,6 +881,7 @@ class UpBlock3D(nn.Module):
         super().__init__()
         resnets = []
         temp_convs = []
+        self.gradient_checkpointing = False
 
         for i in range(num_layers):
             res_skip_channels = in_channels if (i == num_layers - 1) else out_channels
