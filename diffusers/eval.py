@@ -102,7 +102,7 @@ def load_primary_models(pretrained_model_path):
 
 
 def main():
-    pretrained_model_path = "t2v_diffusers"
+    pretrained_model_path = "models/model_scope_diffusers"
     # Load scheduler, tokenizer and models.
     noise_scheduler, tokenizer, text_encoder, vae, unet = load_primary_models(pretrained_model_path)
 

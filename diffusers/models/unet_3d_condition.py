@@ -365,7 +365,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         down_block_additional_residuals: Optional[Tuple[torch.Tensor]] = None,
         mid_block_additional_residual: Optional[torch.Tensor] = None,
         return_dict: bool = True,
-        diffusion_depth: int = 0,
+        diffusion_depth: int = 1,
     ) -> Union[UNet3DConditionOutput, Tuple]:
         r"""
         Args:
