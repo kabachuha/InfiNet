@@ -75,7 +75,18 @@ def load_primary_models(pretrained_model_path):
     tokenizer = CLIPTokenizer.from_pretrained(pretrained_model_path, subfolder="tokenizer")
     text_encoder = CLIPTextModel.from_pretrained(pretrained_model_path, subfolder="text_encoder")
     vae = AutoencoderKL.from_pretrained(pretrained_model_path, subfolder="vae")
-    unet = UNet3DConditionModel.from_pretrained(pretrained_model_path, subfolder="unet")
+
+    unet = UNet3DConditionModel()
+
+    model_path = os.path.join(os.getcwd(), pretrained_model_path, 'unet', 'diffusion_pytorch_model.bin')
+    # Load the pretrained weights
+    pretrained_dict = torch.load(
+        model_path,
+        map_location=torch.device('cuda'),
+    )
+    unet.load_state_dict(pretrained_dict)
+
+    unet.infinet._init_weights()
 
     return noise_scheduler, tokenizer, text_encoder, vae, unet
 

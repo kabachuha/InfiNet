@@ -86,7 +86,7 @@ def load_primary_models(pretrained_model_path):
 
     unet = UNet3DConditionModel()
 
-    model_path = "/home/mix/Text-To-Video-Finetuning/kaba/InfiNet/diffusers/t2v_diffusers/unet/diffusion_pytorch_model.bin"
+    model_path = os.path.join(os.getcwd(), pretrained_model_path, 'unet', 'diffusion_pytorch_model.bin')
     # Load the pretrained weights
     pretrained_dict = torch.load(
         model_path,
