@@ -158,7 +158,7 @@ def export_to_video(video_frames: List[np.ndarray], output_video_path: str = Non
     os.makedirs(os.path.join(os.getcwd(), 'out'), exist_ok=True)
     for i in range(len(video_frames)):
         cv2.imwrite(os.path.join(os.getcwd(), 'out',
-                    f"{i:06}.png"), video_frames[i].tobytes())
+                    f"{i:06}.png"), video_frames[i])
 
     # create a pipe for ffmpeg to write the video frames to
     ffmpeg_pipe = subprocess.Popen(
