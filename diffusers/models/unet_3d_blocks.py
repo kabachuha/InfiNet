@@ -780,7 +780,7 @@ class CrossAttnUpBlock3D(nn.Module):
                         infinet.in_channels,
                         2,
                         max(0, 3 - len(infinet.output_blocks_injections)),#max(0, len(infinet.input_blocks_injections) - len(infinet.output_blocks_injections)),
-                        out_channels,
+                        (out_channels // 2**(len(infinet.output_blocks_injections)-1)) if len(infinet.output_blocks_injections) > 1 else out_channels,
                         is_up=True,
                     )
                 )
@@ -932,7 +932,7 @@ class UpBlock3D(nn.Module):
                         infinet.in_channels,
                         2,
                         max(0, 3 - len(infinet.output_blocks_injections)),#max(0, len(infinet.input_blocks_injections) - len(infinet.output_blocks_injections)),
-                        out_channels,
+                        (out_channels // 2**(len(infinet.output_blocks_injections)-1)) if len(infinet.output_blocks_injections) > 1 else out_channels,
                         is_up=True,
                     )
                 )
