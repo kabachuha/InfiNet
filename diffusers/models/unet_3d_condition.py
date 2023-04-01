@@ -438,8 +438,8 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         if self.use_infinet and diffusion_depth > 0:
             x_c = sample.clone().detach()
             x_m = torch.zeros(x_c.shape[:1] + (1,) + x_c.shape[2:], dtype=x_c.dtype, device=x_c.device)
-            x_m[:, :, 0, :, :] = torch.ones_like(x_c[:, :, 0, :, :])
-            x_m[:, :, -1, :, :] = torch.ones_like(x_c[:, :, -1, :, :])
+            x_m[:, :, 0, :, :] = torch.ones_like(x_m[:, :, 0, :, :])
+            x_m[:, :, -1, :, :] = torch.ones_like(x_m[:, :, -1, :, :])
             x_c = x_c.permute(0, 2, 1, 3, 4).reshape((x_c.shape[0] * num_frames, -1) + x_c.shape[3:])
             x_m = x_m.permute(0, 2, 1, 3, 4).reshape((x_m.shape[0] * num_frames, -1) + x_m.shape[3:])
         else:
