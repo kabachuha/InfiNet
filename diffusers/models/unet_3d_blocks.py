@@ -83,20 +83,20 @@ class DoDBlock(nn.Module):
 
         # Add image conditioning as linear operation
         
-        print('IS UP ', self.is_up)
-        print('h', h.shape)
-        print('xc', x_c.shape)
-        print('xm', x_m.shape)
+        #print('IS UP ', self.is_up)
+        #print('h', h.shape)
+        #print('xc', x_c.shape)
+        #print('xm', x_m.shape)
         
-        print('cw', self.conv_w.weight.shape)
+        #print('cw', self.conv_w.weight.shape)
 
         # get weights and biases from frame conditioning
         # vid convolution (initialized with zero weights and biases at first)
         x_c_w = self.conv_w(x_c)
         x_c_b = self.conv_b(x_c)
         
-        print('xcw', x_c_w.shape)
-        print('xcb', x_c_b.shape)
+        #print('xcw', x_c_w.shape)
+        #print('xcb', x_c_b.shape)
         
         h = x_c_w * h + x_c_b + h # uses hadamard product
 
@@ -774,8 +774,8 @@ class CrossAttnUpBlock3D(nn.Module):
             )
 
             if infinet is not None:
-                print(len(infinet.input_blocks_injections))
-                print(len(infinet.output_blocks_injections))
+                #print(len(infinet.input_blocks_injections))
+                #print(len(infinet.output_blocks_injections))
                 infinet.output_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
                         2,
@@ -926,8 +926,8 @@ class UpBlock3D(nn.Module):
             )
 
             if infinet is not None:
-                print(len(infinet.input_blocks_injections))
-                print(len(infinet.output_blocks_injections))
+                #print(len(infinet.input_blocks_injections))
+                #print(len(infinet.output_blocks_injections))
                 infinet.output_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
                         2,
