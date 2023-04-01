@@ -762,7 +762,7 @@ class CrossAttnUpBlock3D(nn.Module):
             if infinet is not None:
                 infinet.output_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
-                        3,
+                        2,
                         len(infinet.output_blocks_injections),
                         out_channels
                     )
@@ -911,7 +911,7 @@ class UpBlock3D(nn.Module):
             if infinet is not None:
                 infinet.output_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
-                        3,
+                        2,
                         len(infinet.output_blocks_injections),
                         out_channels
                     )
