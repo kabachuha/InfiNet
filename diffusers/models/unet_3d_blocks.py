@@ -36,7 +36,7 @@ class DoDBlock(nn.Module):
                  padding=1):
         super().__init__()
         self.channels = channels
-        self.out_channels = out_channels or channels
+        self.out_channels = min(out_channels * (2**depth), 1280)
         self.dims = dims
         stride = 2**depth if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
 
