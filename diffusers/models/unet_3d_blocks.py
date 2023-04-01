@@ -33,11 +33,13 @@ class DoDBlock(nn.Module):
                  dims=3,
                  depth=0,
                  out_channels=None,
-                 padding=1):
+                 padding=1,
+                 is_up=False,):
         super().__init__()
         self.channels = channels
-        self.out_channels = (out_channels or channels) * (2 ** depth)
+        self.out_channels = min((out_channels or channels) * (2 ** depth), 1280)
         self.dims = dims
+        self.is_up = is_up
         stride = 2**depth if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
 
         # Convolution block, which should be initialized with zero weights and biases
@@ -81,6 +83,7 @@ class DoDBlock(nn.Module):
 
         # Add image conditioning as linear operation
         
+        print('IS UP ', self.is_up)
         print('h', h.shape)
         print('xc', x_c.shape)
         print('xm', x_m.shape)
@@ -514,7 +517,8 @@ class CrossAttnDownBlock3D(nn.Module):
                         infinet.in_channels,
                         2,
                         len(infinet.input_blocks_injections),
-                        out_channels
+                        out_channels,
+                        is_up=False,
                     )
                 )
 
@@ -667,7 +671,8 @@ class DownBlock3D(nn.Module):
                         infinet.in_channels,
                         2, # dims
                         len(infinet.input_blocks_injections),
-                        out_channels
+                        out_channels,
+                        is_up=False,
                     )
                 )
 
@@ -773,7 +778,8 @@ class CrossAttnUpBlock3D(nn.Module):
                         infinet.in_channels,
                         2,
                         len(infinet.output_blocks_injections),
-                        out_channels
+                        out_channels,
+                        is_up=True,
                     )
                 )
 
@@ -922,7 +928,8 @@ class UpBlock3D(nn.Module):
                         infinet.in_channels,
                         2,
                         len(infinet.output_blocks_injections),
-                        out_channels
+                        out_channels,
+                        is_up=True,
                     )
                 )
 
