@@ -37,7 +37,7 @@ class DoDBlock(nn.Module):
                  is_up=False,):
         super().__init__()
         self.channels = channels
-        self.out_channels = min((out_channels or channels) * (2 ** depth), 1280)
+        self.out_channels = min((out_channels or channels) * (2 ** depth), 1280) if not is_up else (out_channels or channels)
         self.dims = dims
         self.is_up = is_up
         stride = 2**depth if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
@@ -774,10 +774,12 @@ class CrossAttnUpBlock3D(nn.Module):
             )
 
             if infinet is not None:
+                print(len(infinet.input_blocks_injections))
+                print(len(infinet.output_blocks_injections))
                 infinet.output_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
                         2,
-                        len(infinet.output_blocks_injections),
+                        max(0, 3 - len(infinet.output_blocks_injections)),#max(0, len(infinet.input_blocks_injections) - len(infinet.output_blocks_injections)),
                         out_channels,
                         is_up=True,
                     )
@@ -924,10 +926,12 @@ class UpBlock3D(nn.Module):
             )
 
             if infinet is not None:
+                print(len(infinet.input_blocks_injections))
+                print(len(infinet.output_blocks_injections))
                 infinet.output_blocks_injections.append(DoDBlock(
                         infinet.in_channels,
                         2,
-                        len(infinet.output_blocks_injections),
+                        max(0, 3 - len(infinet.output_blocks_injections)),#max(0, len(infinet.input_blocks_injections) - len(infinet.output_blocks_injections)),
                         out_channels,
                         is_up=True,
                     )
