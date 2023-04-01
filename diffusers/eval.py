@@ -138,7 +138,7 @@ def main():
             prompt,
             width=512,
             height=384,
-            num_frames=50,
+            num_frames=20,
             num_inference_steps=50,
             guidance_scale=7.5
         ).frames
@@ -147,13 +147,18 @@ def main():
     del pipeline
     gc.collect()
 
-
+import cv2
 def export_to_video(video_frames: List[np.ndarray], output_video_path: str = None, fps: int = 8) -> str:
     if output_video_path is None:
         output_video_path = tempfile.NamedTemporaryFile(suffix=".mp4").name
 
     #fps = 8
     h, w, c = video_frames[0].shape
+
+    os.makedirs(os.path.join(os.getcwd(), 'out'), exist_ok=True)
+    for i in range(len(video_frames)):
+        cv2.imwrite(os.path.join(os.getcwd(), 'out',
+                    f"{i:06}.png"), video_frames[i].tobytes())
 
     # create a pipe for ffmpeg to write the video frames to
     ffmpeg_pipe = subprocess.Popen(
