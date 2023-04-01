@@ -21,6 +21,7 @@ import torchvision.transforms as T
 import diffusers
 import transformers
 
+from pkg_resources import resource_filename
 from torchvision import transforms
 from tqdm.auto import tqdm
 
@@ -185,3 +186,19 @@ def export_to_video(video_frames: List[np.ndarray], output_video_path: str = Non
 
 if __name__ == "__main__":
     main()
+
+def find_ffmpeg_binary():
+    try:
+        import google.colab
+        return 'ffmpeg'
+    except:
+        pass
+    for package in ['imageio_ffmpeg', 'imageio-ffmpeg']:
+        try:
+            package_path = resource_filename(package, 'binaries')
+            files = [os.path.join(package_path, f) for f in os.listdir(
+                package_path) if f.startswith("ffmpeg-")]
+            files.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+            return files[0] if files else 'ffmpeg'
+        except:
+            return 'ffmpeg'
