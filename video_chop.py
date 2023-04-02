@@ -21,6 +21,15 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file '{video_path}' not found.")
 
+
+    # Initialize the CSV data storage
+    csv_data = [["Clip Name", "Frame Number"]]
+    for i in range(depth):
+        csv_data[0].append(f"Depth {i}")
+
+    # Create a list to store "P" markers for each depth and frame number
+    p_marker_list = [{} for _ in range(depth)]
+
     # Open input video file and get its properties
     video = cv2.VideoCapture(video_path)
     fps = int(video.get(cv2.CAP_PROP_FPS))
@@ -39,7 +48,6 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
         ret, frame = video.read()
         if ret:
             video_frames.append(frame)
-    frame_depth_mapping = [["P" if i==0 else "" for i in range(depth+1)] for j in range(total_frames)]
     # Iterate over each depth level and create video subsets and txt files
     dir_name = ""
     curr_depth = 0
@@ -75,7 +83,7 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
             # Write the frames for the current video subset to the output file
             for j in tqdm(range(frame_index, end_index, frame_skip), desc=f'Subset {video_count}'):
                 out.write(video_frames[j])
-                frame_depth_mapping[j][curr_depth] = "P"
+                p_marker_list[curr_depth][j] = "P"
 
             out.release()
 
@@ -90,17 +98,20 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
     video.release()
 
 
-    # Save CSV file
-    """with open("frame_depth_mapping.csv", "w", newline="") as csvfile:
-        fieldnames = ["FRAME"] + [f"DEPTH_{i}" for i in range(depth + 1)]
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
 
-        for idx, row in enumerate(frame_depth_mapping):
-            row_dict = {"FRAME": idx}
-            row_dict.update({f"DEPTH_{i}": row[i] for i in range(depth + 1)})
-            writer.writerow(row_dict)"""
+    # Generate the CSV data based on the "P" marker list
+    for frame_num in range(total_frames):
+        csv_row = [""] * (2 + depth)
+        csv_row[1] = frame_num
+        for d in range(depth):
+            if frame_num in p_marker_list[d]:
+                csv_row[2 + d] = "P"
+        csv_data.append(csv_row)
 
+    # Write the CSV data to a file
+    with open("chopped_video_info.csv", "w", newline='') as f:
+        writer = csv.writer(f)
+        writer.writerows(csv_data)
 
 def closest_divisible_integer(x, n):
     remainder = x % n
