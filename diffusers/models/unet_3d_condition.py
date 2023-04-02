@@ -41,8 +41,12 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 # Class to keep DiffusionOverDiffusion modules as a separate model
 # with weights saveable as a detachable checkpoint
 class InfiNet(nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels):
         super(InfiNet, self).__init__()
+
+        self.in_channels = in_channels
+
+        self.diffusion_depth = 0 # Placeholder, because it's not passable into the pipeline
 
         self.input_blocks_injections = nn.ModuleList()
         self.output_blocks_injections = nn.ModuleList()
@@ -178,7 +182,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
 
         if self.use_infinet:
             # InfiNet insertion
-            self.infinet = InfiNet()
+            self.infinet = InfiNet(in_channels)
 
         if isinstance(attention_head_dim, int):
             attention_head_dim = (attention_head_dim,) * len(down_block_types)
@@ -363,7 +367,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         down_block_additional_residuals: Optional[Tuple[torch.Tensor]] = None,
         mid_block_additional_residual: Optional[torch.Tensor] = None,
         return_dict: bool = True,
-        diffusion_depth: int = 0,
+        #diffusion_depth: int = 1, #until diffusion_depth is in Diffusers, we'll have to set it up in class properties instead
     ) -> Union[UNet3DConditionOutput, Tuple]:
         r"""
         Args:
@@ -433,11 +437,11 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         # If aiming for DiffusionOverDiffusion and have InfiNet enabled, keep the original video
         # + its mask of the first and last frames
 
-        if self.use_infinet and diffusion_depth > 0:
+        if self.use_infinet and self.infinet.diffusion_depth > 0:
             x_c = sample.clone().detach()
-            x_m = torch.zeros_like(x_c)
-            x_m[:, :, 0, :, :] = torch.ones_like(x_c[:, :, 0, :, :])
-            x_m[:, :, -1, :, :] = torch.ones_like(x_c[:, :, -1, :, :])
+            x_m = torch.zeros(x_c.shape[:1] + (1,) + x_c.shape[2:], dtype=x_c.dtype, device=x_c.device)
+            x_m[:, :, 0, :, :] = torch.ones_like(x_m[:, :, 0, :, :])
+            x_m[:, :, -1, :, :] = torch.ones_like(x_m[:, :, -1, :, :])
             x_c = x_c.permute(0, 2, 1, 3, 4).reshape((x_c.shape[0] * num_frames, -1) + x_c.shape[3:])
             x_m = x_m.permute(0, 2, 1, 3, 4).reshape((x_m.shape[0] * num_frames, -1) + x_m.shape[3:])
         else:

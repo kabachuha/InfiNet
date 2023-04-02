@@ -33,12 +33,14 @@ class DoDBlock(nn.Module):
                  dims=3,
                  depth=0,
                  out_channels=None,
-                 padding=1):
+                 padding=1,
+                 is_up=False,):
         super().__init__()
         self.channels = channels
-        self.out_channels = out_channels or channels
+        self.out_channels = min((out_channels or channels) * (2 ** depth), 1280) if not is_up else (out_channels or channels)
         self.dims = dims
-        stride = 2**dims if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
+        self.is_up = is_up
+        stride = 2**depth if dims != 3 else (1, 2**depth, 2**depth) # if depth is zero, the stride is 1
 
         # Convolution block, which should be initialized with zero weights and biases
         # (zero conv)
@@ -80,11 +82,21 @@ class DoDBlock(nn.Module):
             return h
 
         # Add image conditioning as linear operation
+        
+        #print('IS UP ', self.is_up)
+        #print('h', h.shape)
+        #print('xc', x_c.shape)
+        #print('xm', x_m.shape)
+        
+        #print('cw', self.conv_w.weight.shape)
 
         # get weights and biases from frame conditioning
         # vid convolution (initialized with zero weights and biases at first)
         x_c_w = self.conv_w(x_c)
         x_c_b = self.conv_b(x_c)
+        
+        #print('xcw', x_c_w.shape)
+        #print('xcb', x_c_b.shape)
         
         h = x_c_w * h + x_c_b + h # uses hadamard product
 
@@ -502,10 +514,11 @@ class CrossAttnDownBlock3D(nn.Module):
 
             if infinet is not None:
                 infinet.input_blocks_injections.append(DoDBlock(
-                        infinet.input_blocks_injections[0].conv_w.in_channels,
-                        3,
+                        infinet.in_channels,
+                        2,
                         len(infinet.input_blocks_injections),
-                        out_channels
+                        out_channels,
+                        is_up=False,
                     )
                 )
 
@@ -655,10 +668,11 @@ class DownBlock3D(nn.Module):
 
             if infinet is not None:
                 infinet.input_blocks_injections.append(DoDBlock(
-                        infinet.input_blocks_injections[0].conv_w.in_channels,
-                        3,
+                        infinet.in_channels,
+                        2, # dims
                         len(infinet.input_blocks_injections),
-                        out_channels
+                        out_channels,
+                        is_up=False,
                     )
                 )
 
@@ -760,11 +774,14 @@ class CrossAttnUpBlock3D(nn.Module):
             )
 
             if infinet is not None:
+                #print(len(infinet.input_blocks_injections))
+                #print(len(infinet.output_blocks_injections))
                 infinet.output_blocks_injections.append(DoDBlock(
-                        infinet.output_blocks_injections[0].conv_w.in_channels,
-                        3,
-                        len(infinet.output_blocks_injections),
-                        out_channels
+                        infinet.in_channels,
+                        2,
+                        max(0, 3 - len(infinet.output_blocks_injections)),#max(0, len(infinet.input_blocks_injections) - len(infinet.output_blocks_injections)),
+                        (out_channels // 2**(len(infinet.output_blocks_injections)-1)) if len(infinet.output_blocks_injections) > 1 else out_channels,
+                        is_up=True,
                     )
                 )
 
@@ -881,6 +898,7 @@ class UpBlock3D(nn.Module):
         super().__init__()
         resnets = []
         temp_convs = []
+        self.gradient_checkpointing=False
 
         for i in range(num_layers):
             res_skip_channels = in_channels if (i == num_layers - 1) else out_channels
@@ -908,11 +926,14 @@ class UpBlock3D(nn.Module):
             )
 
             if infinet is not None:
+                #print(len(infinet.input_blocks_injections))
+                #print(len(infinet.output_blocks_injections))
                 infinet.output_blocks_injections.append(DoDBlock(
-                        infinet.output_blocks_injections[0].conv_w.in_channels,
-                        3,
-                        len(infinet.output_blocks_injections),
-                        out_channels
+                        infinet.in_channels,
+                        2,
+                        max(0, 3 - len(infinet.output_blocks_injections)),#max(0, len(infinet.input_blocks_injections) - len(infinet.output_blocks_injections)),
+                        (out_channels // 2**(len(infinet.output_blocks_injections)-1)) if len(infinet.output_blocks_injections) > 1 else out_channels,
+                        is_up=True,
                     )
                 )
 
