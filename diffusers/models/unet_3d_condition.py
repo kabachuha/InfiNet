@@ -440,7 +440,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
 
         if self.use_infinet and self.infinet.diffusion_depth > 0:
             if self.infinet.skip_midframes:
-                x_c = torch.cat((sample[:, :, 0, :, :], sample[:, :, -1, :, :]), dim=2)
+                x_c = torch.cat((sample[:, :, 0, :, :].unsqueeze(2), sample[:, :, -1, :, :].unsqueeze(2)), dim=2)
             else:
                 x_c = sample.clone().detach()
             x_m = torch.zeros(x_c.shape[:1] + (1,) + x_c.shape[2:], dtype=x_c.dtype, device=x_c.device)
