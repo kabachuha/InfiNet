@@ -40,6 +40,8 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
         frame_skip = math.log2(total_frames) * i
         frame_skip_at_depth.append(int(frame_skip))
     frame_skip_at_depth.reverse()
+    
+    
 
     # Read all frames of the input video into memory
     video_frames = []
