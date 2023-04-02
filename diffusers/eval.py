@@ -98,6 +98,7 @@ def load_primary_models(pretrained_model_path):
     unet.infinet._init_weights()
 
     unet.infinet.diffusion_depth = 1
+    unet.infinet.skip_midframes = True
     #unet = UNet3DConditionModel.from_pretrained(pretrained_model_path, subfolder="unet")
 
     return noise_scheduler, tokenizer, text_encoder, vae, unet
