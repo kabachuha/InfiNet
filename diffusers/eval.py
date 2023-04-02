@@ -96,6 +96,8 @@ def load_primary_models(pretrained_model_path):
     unet.load_state_dict(pretrained_dict, strict=False)
 
     unet.infinet._init_weights()
+
+    unet.infinet.diffusion_depth = 1
     #unet = UNet3DConditionModel.from_pretrained(pretrained_model_path, subfolder="unet")
 
     return noise_scheduler, tokenizer, text_encoder, vae, unet
@@ -147,6 +149,7 @@ def main():
     del pipeline
     gc.collect()
 
+from PIL import Image
 import cv2
 def export_to_video(video_frames: List[np.ndarray], output_video_path: str = None, fps: int = 8) -> str:
     if output_video_path is None:
@@ -157,6 +160,7 @@ def export_to_video(video_frames: List[np.ndarray], output_video_path: str = Non
 
     os.makedirs(os.path.join(os.getcwd(), 'out'), exist_ok=True)
     for i in range(len(video_frames)):
+#        Image.fromarray(video_frames[i]).save(os.path.join(os.getcwd(), 'out', f"frame_{i}.png"))
         cv2.imwrite(os.path.join(os.getcwd(), 'out',
                     f"{i:06}.png"), video_frames[i])
 
