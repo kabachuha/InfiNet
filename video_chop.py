@@ -21,7 +21,6 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file '{video_path}' not found.")
 
-
     # Initialize the CSV data storage
     csv_data = [["Clip Name", "Frame Number"]]
     for i in range(depth):
@@ -48,16 +47,17 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
         ret, frame = video.read()
         if ret:
             video_frames.append(frame)
+
     # Iterate over each depth level and create video subsets and txt files
     dir_name = ""
     curr_depth = 0
+
     for frame_skip in frame_skip_at_depth:
         if frame_skip != 0:
             work_frames = total_frames - total_frames % frame_skip
             subset_frames = int(work_frames / frame_skip)
         else:
             subset_frames = int(total_frames)
-
         num_videos = math.ceil(subset_frames / max_frames)
         video_count = 0
         if dir_name == "":
@@ -68,12 +68,12 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
 
         # Iterate over each video subset within the depth level
         for i in tqdm(range(num_videos), desc=f'Depth {curr_depth}'):
+
             # Define the output video file name and properties
             output_filename = f"{dir_name}/subset_{video_count}.mp4"
             height, width, _ = video_frames[0].shape
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             out = cv2.VideoWriter(output_filename, fourcc, fps, (width, height))
-
             frame_skip = 1 if frame_skip == 0 else frame_skip
 
             # Determine the frame range for the current video subset
@@ -84,20 +84,14 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
             for j in tqdm(range(frame_index, end_index, frame_skip), desc=f'Subset {video_count}'):
                 out.write(video_frames[j])
                 p_marker_list[curr_depth][j] = "P"
-
             out.release()
 
             # Save a txt file for the current video subset
             with open(f"{dir_name}/subset_{video_count}.txt", "w") as f:
                 f.write(f"Subset {video_count}")
-
             video_count += 1
-
         curr_depth += 1
-
     video.release()
-
-
 
     # Generate the CSV data based on the "P" marker list
     for frame_num in range(total_frames):
@@ -113,18 +107,11 @@ def chop_video(video_path: str, depth: int, max_frames: int) -> None:
         writer = csv.writer(f)
         writer.writerows(csv_data)
 
-def closest_divisible_integer(x, n):
-    remainder = x % n
-    if remainder <= n/2:
-        return x - remainder
-    else:
-        return x - n + remainder
-
 def main():
     parser = argparse.ArgumentParser(description="Chop a video file into subsets of frames.")
     parser.add_argument("video_file", help="Path to the video file.")
-    parser.add_argument("depth", type=int, help="Desired depth level.")
-    parser.add_argument("max_frames", type=int, help="Maximum frames in a subset at the highest depth level.")
+    parser.add_argument("--depth", type=int, default=8, help="Desired depth level.")
+    parser.add_argument("--max_frames", type=int, default=24, help="Maximum frames in a subset at the highest depth level.")
     args = parser.parse_args()
     chop_video(args.video_file, args.depth, args.max_frames)
 
