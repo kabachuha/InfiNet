@@ -4,7 +4,7 @@ import argparse
 import cv2
 from tqdm import tqdm
 
-def chop_video(video_path: str) -> None:
+def chop_video(video_path: str, L: int) -> None:
     if not os.path.exists(video_path):
         raise FileNotFoundError(f"Video file '{video_path}' not found.")
 
@@ -19,14 +19,14 @@ def chop_video(video_path: str) -> None:
             video_frames.append(frame)
 
     # Calculate the maximum depth level
-    max_depth = 0
-    while 2 ** (max_depth) <= total_frames // 2:
+    max_depth = 1
+    while L ** (max_depth) <= total_frames // L:
         max_depth += 1
 
     dir_name = ""
 
     for curr_depth in range(max_depth):
-        num_splits = 2 ** curr_depth
+        num_splits = L ** curr_depth
         frames_per_split = total_frames // num_splits
         if dir_name == "":
             dir_name = f"depth_{curr_depth}"
@@ -54,8 +54,9 @@ def chop_video(video_path: str) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Chop a video file into subsets of frames.")
     parser.add_argument("video_file", help="Path to the video file.")
+    parser.add_argument("--L", help="Num of splits on each level.")
     args = parser.parse_args()
-    chop_video(args.video_file)
+    chop_video(args.video_file, int(args.L))
 
 if __name__ == "__main__":
     main()
