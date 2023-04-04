@@ -48,6 +48,9 @@ def chop_video(video_path: str, L: int) -> None:
                 out.write(video_frames[j])
 
             out.release()
+            # create a txt file alongside the video
+            with open(f"{dir_name}/subset_{i}.txt", "w") as f:
+                f.write(f"")
 
     video.release()
 
