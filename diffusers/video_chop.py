@@ -3,6 +3,7 @@ import sys
 import argparse
 import cv2
 from tqdm import tqdm
+from pathlib import Path
 
 def chop_video(video_path: str, L: int) -> None:
     if not os.path.exists(video_path):
@@ -25,7 +26,7 @@ def chop_video(video_path: str, L: int) -> None:
     while L ** (max_depth) <= total_frames // L:
         max_depth += 1
 
-    dir_name = ""
+    dir_name = Path(video_path).stem
 
     for curr_depth in range(max_depth+1):
         num_splits = L ** curr_depth
