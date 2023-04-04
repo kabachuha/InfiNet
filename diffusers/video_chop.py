@@ -12,6 +12,8 @@ def chop_video(video_path: str, L: int) -> None:
     fps = int(video.get(cv2.CAP_PROP_FPS))
     total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
+    total_frames = (total_frames // L) * L
+
     video_frames = []
     for _ in tqdm(range(total_frames), desc='Reading video frames'):
         ret, frame = video.read()
@@ -36,7 +38,8 @@ def chop_video(video_path: str, L: int) -> None:
 
         for i in tqdm(range(num_splits), desc=f'Depth {curr_depth}'):
 
-            output_filename = f"{dir_name}/subset_{i}.mp4"
+            os.makedirs(os.path.join(dir_name, f"part_{i//L}"), exist_ok=True)
+            output_filename = f"{dir_name}/part_{i//L}/subset_{i%L}.mp4"
             height, width, _ = video_frames[0].shape
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             out = cv2.VideoWriter(output_filename, fourcc, fps, (width, height))
@@ -49,7 +52,7 @@ def chop_video(video_path: str, L: int) -> None:
 
             out.release()
             # create a txt file alongside the video
-            with open(f"{dir_name}/subset_{i}.txt", "w") as f:
+            with open(f"{dir_name}/part_{i//L}/subset_{i%L}.txt", "w") as f:
                 f.write(f"")
 
     video.release()
