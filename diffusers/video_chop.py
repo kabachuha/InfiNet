@@ -19,13 +19,13 @@ def chop_video(video_path: str, L: int) -> None:
             video_frames.append(frame)
 
     # Calculate the maximum depth level
-    max_depth = 1
+    max_depth = 0
     while L ** (max_depth) <= total_frames // L:
         max_depth += 1
 
     dir_name = ""
 
-    for curr_depth in range(max_depth):
+    for curr_depth in range(max_depth+1):
         num_splits = L ** curr_depth
         frames_per_split = total_frames // num_splits
         if dir_name == "":
