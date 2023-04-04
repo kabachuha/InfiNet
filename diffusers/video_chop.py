@@ -28,7 +28,7 @@ def chop_video(video_path: str, L: int) -> None:
 
     dir_name = Path(video_path).stem
 
-    for curr_depth in range(max_depth+1):
+    for curr_depth in range(max_depth):
         num_splits = L ** curr_depth
         frames_per_split = total_frames // num_splits
         if dir_name == "":
