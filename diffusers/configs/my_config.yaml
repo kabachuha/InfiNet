@@ -16,6 +16,8 @@ train_data:
   single_video_path: ""
   single_video_prompt: ""
 
+  infinet_source_path: "video"
+
 validation_data:
   prompt: ""
   sample_preview: True
