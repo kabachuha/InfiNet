@@ -288,9 +288,6 @@ class VideoDataset(Dataset):
             # Get video prompt
             prompt = vid_data['prompt']
 
-            # Get diffusion depth for training Infinet
-            diffusion_depth = vid_data['diffusion_depth'] if 'diffusion_depth' in vid_data.keys() else 0
-
             video = vr.get_batch(sample_index)
             video = rearrange(video, "f h w c -> f c h w")
 
