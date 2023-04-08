@@ -95,7 +95,14 @@ def load_primary_models(pretrained_model_path):
     )
     unet.load_state_dict(pretrained_dict, strict=False)
 
-    unet.infinet._init_weights()
+    has_pretrained_weights = False
+
+    for k, v in pretrained_dict.items():
+        if k.startswith('infinet'):
+            has_pretrained_weights = True
+
+    if not has_pretrained_weights:
+        unet.infinet._init_weights()
 
     unet.infinet.diffusion_depth = 1
     #unet = UNet3DConditionModel.from_pretrained(pretrained_model_path, subfolder="unet")
