@@ -61,6 +61,7 @@ class VideoDataset(Dataset):
 
         if self.train_infinet:
             self.init_infinet_video_data()
+        self.depth = None
 
     def init_infinet_video_data(self):
         print("Initializing InfiNet Dataset")
@@ -207,18 +208,26 @@ class VideoDataset(Dataset):
 
     def __len__(self):
         if self.train_data is not None:
-            return len(self.train_data['data'])
+            try:
+                return len(self.train_data['data'])
+            except:
+                return 1
         else:
             return 1
 
-    def __getitem__(self, index, depth=None):
+    def __getitem__(self, index):
         
         # Initialize variables
         video = None
         prompt = None
         prompt_ids = None
 
-        if self.train_infinet and depth != None:
+        if self.train_infinet and self.depth != None:
+
+            print("Using Depth:",self.depth)
+
+            depth = self.depth
+
             parts = int(self.train_data[depth]["part_count"])
             if depth != self.prev_depth or self.infindex > parts:
                 self.infindex = 0
