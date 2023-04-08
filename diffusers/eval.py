@@ -102,6 +102,7 @@ def load_primary_models(pretrained_model_path):
             has_pretrained_weights = True
 
     if not has_pretrained_weights:
+        print('Pretrained Infinet not found, setting its weights to zeros')
         unet.infinet._init_weights()
 
     unet.infinet.diffusion_depth = 1
