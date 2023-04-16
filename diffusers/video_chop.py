@@ -78,6 +78,7 @@ def stuff(video_path: str, L: int):
     total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
     cur_dir_name = os.path.split(video_path)[0]#Path(video_path).stem
+    orig_name = Path(video_path).stem
     #dir_name = cur_dir_name
     #os.mkdir(dir_name)
     vid_name = os.path.split(video_path)[1]
@@ -93,6 +94,13 @@ def stuff(video_path: str, L: int):
         video_path = video_path_new
         start_frame += chop_video(video_path, dir_name, L, start_frame)
         scenario += 1
+    
+    os.rename(video_path, os.path.join(os.getcwd(), vid_name))
+    os.mkdir(orig_name)
+
+    for i in os.listdir(os.getcwd()):
+        if i.startswith('scenario_'):
+            os.rename(i, os.path.join(orig_name, i))
 
 def main():
     parser = argparse.ArgumentParser(description="Chop a video file into subsets of frames.")
