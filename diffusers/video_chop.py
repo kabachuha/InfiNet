@@ -13,18 +13,20 @@ def chop_video(video_path: str, L: int) -> None:
     fps = int(video.get(cv2.CAP_PROP_FPS))
     total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    total_frames = (total_frames // L) * L
+    # Calculate the maximum depth level
+    max_depth = 0
+    while L ** (max_depth) <= total_frames:
+        max_depth += 1
+    
+    max_depth = max_depth - 1
+
+    total_frames = L**max_depth
 
     video_frames = []
     for _ in tqdm(range(total_frames), desc='Reading video frames'):
         ret, frame = video.read()
         if ret:
             video_frames.append(frame)
-
-    # Calculate the maximum depth level
-    max_depth = 0
-    while L ** (max_depth) <= total_frames // L:
-        max_depth += 1
 
     dir_name = Path(video_path).stem
 
@@ -47,6 +49,9 @@ def chop_video(video_path: str, L: int) -> None:
 
             start_index = i * frames_per_split
             end_index = (i + 1) * frames_per_split
+
+            print(f'start_index: {start_index}')
+            print(f'end_index: {end_index}')
 
             for j in tqdm(range(start_index, end_index), desc=f'Subset {i}, {len(range(start_index, end_index))} Frames'):
                 out.write(video_frames[j])
