@@ -49,7 +49,7 @@ def chop_video(video_path: str, folder:str, L: int, start_frame:int) -> int:
             output_filename = f"{dir_name}/part_{i//L}/subset_{i%L}.mp4"
             height, width, _ = video_frames[0].shape
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            out = cv2.VideoWriter(os.path.join(dir_name, output_filename), fourcc, fps, (width, height))
+            out = cv2.VideoWriter(output_filename, fourcc, fps, (width, height))
 
             start_index = i * frames_per_split
             end_index = (i + 1) * frames_per_split
@@ -85,7 +85,7 @@ def stuff(video_path: str, L: int):
     scenario = 0
     start_frame = 0
 
-    while start_frame <= total_frames:
+    while start_frame < total_frames:
         dir_name = f"scenario_{scenario}"
         os.mkdir(os.path.join(cur_dir_name, dir_name))
         video_path_new = os.path.join(cur_dir_name, dir_name, vid_name)
