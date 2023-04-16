@@ -85,7 +85,7 @@ def stuff(video_path: str, L: int):
     scenario = 0
     start_frame = 0
 
-    while start_frame < total_frames:
+    while start_frame < total_frames - L:
         dir_name = f"scenario_{scenario}"
         os.mkdir(os.path.join(cur_dir_name, dir_name))
         video_path_new = os.path.join(cur_dir_name, dir_name, vid_name)
