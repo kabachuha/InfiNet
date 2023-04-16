@@ -17,3 +17,9 @@ The key difference with ControlNet is that this model has to control both Upsamp
 1. StabilityAI's Stable Diffusion https://github.com/CompVis/stable-diffusion
 2. Microsoft's NUWA-XL: Diffusion over Diffusion for eXtremely Long Video Generation https://arxiv.org/abs/2303.12346
 3. lllyasviel's ControlNet https://github.com/lllyasviel/ControlNet
+
+## Making Dataset for DiffusionOverDiffusion
+
+1. Chop the large video into smaller subdivisions by launching `python video_chop.py your_vide.mp4 --L sample_frames` where `sample_frames` is the number of divisions on each level. Defaults to 12.
+
+2. 
