@@ -24,7 +24,17 @@ The key difference with ControlNet is that this model has to control both Upsamp
 2. Microsoft's NUWA-XL: Diffusion over Diffusion for eXtremely Long Video Generation https://arxiv.org/abs/2303.12346
 3. lllyasviel's ControlNet https://github.com/lllyasviel/ControlNet
 
-## Making Dataset for DiffusionOverDiffusion
+## Training it yourself
+
+### Hyperparameters
+
+Due to the exponential frame count growth at deeper levels, the number of parameters giving the target length is limited.
+
+For Microsoft's claimed 11 minutes long Flintstones episodes the most plausible combination is L=6 subdivisions of 12 fps sampled videos, resulting in 5 depth levels. It gives 10.8 minutes long videos with both a natural framerate and unsurprisingly close to their value.
+
+![image](https://user-images.githubusercontent.com/14872007/232760001-27011cfc-ccb3-44ac-b44d-bb2d7d5c0010.png)
+
+### Making Dataset for DiffusionOverDiffusion
 
 1. Chop the large video into smaller subdivisions by launching `python video_chop.py your_vide.mp4 --L sample_frames` where `sample_frames` is the number of divisions on each level. Defaults to 12.
 
