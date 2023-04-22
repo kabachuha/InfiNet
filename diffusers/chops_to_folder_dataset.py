@@ -72,9 +72,9 @@ def move_the_files(init_path, L, depth, overwrite_dims, width, height, overwrite
                 write_as_video(os.path.join(folder_dataset_path, f'depth_{d}_part_{j}_subset{i}.mp4'), L_frames, overwrite_dims, width, height, fps)
                 shutil.copy(txt_path, os.path.join(folder_dataset_path, f'depth_{d}_part_{j}_subset{i}.txt'))
 
-                t += 1
                 tq.set_description(f'Depth {d}, part {j}, subset{i}')
-                tq.update(t)
+                #tq.set_description(os.path.join(next_part_path, f'subset_{0}.mp4'))
+                tq.update(1)
     
     tq.close() 
 
