@@ -58,7 +58,7 @@ def move_the_files(init_path, L, depth, overwrite_dims, width, height, overwrite
                 
                 # go to the subset for video frames sampling
                 next_depth_name = os.path.join(depth_name, f'depth_{d+1}')
-                next_part_path = os.path.join(next_depth_name, f'part_{i}') # `i` cause we want to sample each corresponding *subset*
+                next_part_path = os.path.join(next_depth_name, f'part_{i+L*j}') # `i` cause we want to sample each corresponding *subset*
 
                 # depths > 0 are *guaranteed* to have L videos in their part_j folders
                 
@@ -69,8 +69,8 @@ def move_the_files(init_path, L, depth, overwrite_dims, width, height, overwrite
                 if overwrite_fps:
                     fps = get_fps(os.path.join(next_part_path, f'subset_{0}.mp4'))
                 
-                write_as_video(os.path.join(folder_dataset_path, f'depth_{d}_part_{j}_subset{i}.mp4'), L_frames, overwrite_dims, width, height, fps)
-                shutil.copy(txt_path, os.path.join(folder_dataset_path, f'depth_{d}_part_{j}_subset{i}.txt'))
+                write_as_video(os.path.join(folder_dataset_path, f'depth_{d}_part_{j}_subset{i+L*j}.mp4'), L_frames, overwrite_dims, width, height, fps)
+                shutil.copy(txt_path, os.path.join(folder_dataset_path, f'depth_{d}_part_{j}_subset{i+L*j}.txt'))
 
                 tq.set_description(f'Depth {d}, part {j}, subset{i}')
                 #tq.set_description(os.path.join(next_part_path, f'subset_{0}.mp4'))
