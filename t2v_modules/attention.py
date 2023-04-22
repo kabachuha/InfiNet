@@ -95,11 +95,11 @@ class CrossAttention(nn.Module):
         elif SELECTED_ATTENTION_TYPE == 'xformers' and has_xformers():
             import xformers
             out = xformers.ops.memory_efficient_attention(
-                q, k, v, op=self.attention_op, scale=self.scale
+                q, k, v, op=self.attention_op, attn_bias=mask
             )
         elif SELECTED_ATTENTION_TYPE == 'torch2_scaled_dot' and has_torch2():
             out = F.scaled_dot_product_attention(
-                q, k, v, dropout_p=0.0, is_causal=False
+                q, k, v, dropout_p=0.0, is_causal=False, attn_mask=mask
             )
         else:
             print(f'Attention type {SELECTED_ATTENTION_TYPE} not available')
